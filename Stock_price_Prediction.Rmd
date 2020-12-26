@@ -1,0 +1,477 @@
+---
+title: "Final Project"
+author: "Meet Valia"
+date: "12/4/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lubridate)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(dplyr)
+library(zoo)
+library(dplyr)
+library(BAS)
+library(gridExtra)
+options(scipen = 999)
+
+```
+
+```{r}
+AAPL = read.table('AAPL.csv', header = TRUE, sep = ',')
+
+GOOG = read.table('GOOG.csv', header = TRUE, sep = ',')
+
+FB = read.table('FB.csv', header = TRUE, sep = ',')
+
+AMZN = read.table('AMZN.csv', header = TRUE, sep = ',')
+
+SPY = read.table('^GSPC.csv', header = TRUE, sep = ',')
+```
+
+
+## Adjusted Closing Price over the Years
+
+```{r fig.height=6, fig.width= 10, results='hide', message=FALSE, warning=FALSE}
+
+
+
+new_APPL.df = AAPL
+new_APPL.df$Date = as.Date(new_APPL.df$Date)
+new_APPL.df$Year <- format(new_APPL.df$Date, "%Y")
+
+#format(as.Date(new_df$Date, format="%d/%m/%Y"),"%Y")
+
+adj.APPL = new_APPL.df %>%
+  group_by(Year) %>%
+  summarize(agg.price = sum(Adj.Close, na.rm = TRUE))
+
+
+
+new_SPY.df = SPY
+new_SPY.df$Date = as.Date(new_SPY.df$Date)
+new_SPY.df$Year <- format(new_SPY.df$Date, "%Y")
+
+#format(as.Date(new_df$Date, format="%d/%m/%Y"),"%Y")
+
+adj.SPY= new_SPY.df %>%
+  group_by(Year) %>%
+  summarize(agg.price = sum(Adj.Close, na.rm = TRUE))
+
+
+
+p1 <- ggplot(adj.APPL) +
+    geom_line(aes(x=Year, y = agg.price, group = 1)) +
+    scale_fill_viridis(discrete=TRUE) +
+    scale_color_viridis(discrete=TRUE) +
+    
+    xlab("Year") +
+    ylab("Adjusted Close Price") + ggtitle("Adjusted Closing Price over the Years for Apple")
+
+
+p2 <- ggplot(adj.SPY) +
+    geom_line(aes(x=Year, y = agg.price , group = 1)) +
+    scale_fill_viridis(discrete=TRUE) +
+    scale_color_viridis(discrete=TRUE) +
+    
+    xlab("Year") +
+    ylab("Adjusted Close Price") + ggtitle("Adjusted Closing Price over the Years for GSPC")
+
+
+grid.arrange(p1, p2, nrow = 1, ncol = 2)
+
+```
+
+
+## Box plot of Adjusted Closing Price of Years
+
+```{r fig.height=6, fig.width= 10, results='hide', message=FALSE, warning=FALSE}
+box.df = data.frame(AAPL$Adj.Close, new_SPY.df$Adj.Close)
+
+
+colnames(box.df)[colnames(box.df) == 'AAPL.Adj.Close'] <- 'AAPL'
+colnames(box.df)[colnames(box.df) == 'new_SPY.df.Adj.Close'] <- 'SPY'
+
+box.df$AAPL = box.df$AAPL / box.df$AAPL[1]
+box.df$SPY = box.df$SPY / box.df$SPY[1]
+
+boxplot(box.df, main="Distribution of Adjusted Closing Price for Apple")
+
+```
+Since the data is normalized, and we compare the boxplots.
+We can deduce from the box plot that the growth for the apple stock is higher than SPY
+
+
+```{r}
+stocks = SPY[, c("Date", "Adj.Close", "Low", "High")]
+stocks$Date = ymd(stocks$Date)
+```
+
+```{r}
+AAPL$Date = ymd(AAPL$Date)
+GOOG$Date = ymd(GOOG$Date)
+FB$Date = ymd(FB$Date)
+AMZN$Date = ymd(AMZN$Date)
+```
+
+```{r}
+names(stocks)[names(stocks) == 'Adj.Close'] = 'SPY'
+names(AAPL)[names(AAPL) == 'Adj.Close'] = 'AAPL'
+names(GOOG)[names(GOOG) == 'Adj.Close'] = 'GOOG'
+names(FB)[names(FB) == 'Adj.Close'] = 'FB'
+names(AMZN)[names(AMZN) == 'Adj.Close'] = 'AMZN'
+```
+
+```{r}
+stocks = merge(x = stocks, y = AAPL[, c("Date", "AAPL")], by = "Date", all = TRUE)
+stocks = merge(x = stocks, y = GOOG[, c("Date", "GOOG")], by = "Date", all = TRUE)
+stocks = merge(x = stocks, y = FB[, c("Date", "FB")], by = "Date", all = TRUE)
+stocks = merge(x = stocks, y = AMZN[, c("Date", "AMZN")], by = "Date", all = TRUE)
+```
+
+
+```{r}
+names(stocks)[names(stocks) == 'High'] = 'SPY_High'
+names(AAPL)[names(AAPL) == 'High'] = 'AAPL_High'
+names(GOOG)[names(GOOG) == 'High'] = 'GOOG_High'
+names(FB)[names(FB) == 'High'] = 'FB_High'
+names(AMZN)[names(AMZN) == 'High'] = 'AMZN_High'
+
+names(stocks)[names(stocks) == 'Low'] = 'SPY_Low'
+names(AAPL)[names(AAPL) == 'Low'] = 'AAPL_Low'
+names(GOOG)[names(GOOG) == 'Low'] = 'GOOG_Low'
+names(FB)[names(FB) == 'Low'] = 'FB_Low'
+names(AMZN)[names(AMZN) == 'Low'] = 'AMZN_Low'
+
+stocks = merge(x = stocks, y = AAPL[, c("Date", "AAPL_High", "AAPL_Low")], by = "Date", all = TRUE)
+stocks = merge(x = stocks, y = GOOG[, c("Date", "GOOG_High", "GOOG_Low")], by = "Date", all = TRUE)
+stocks = merge(x = stocks, y = FB[, c("Date", "FB_High", "FB_Low")], by = "Date", all = TRUE)
+stocks = merge(x = stocks, y = AMZN[, c("Date", "AMZN_High", "AMZN_Low")], by = "Date", all = TRUE)
+
+```
+
+```{r}
+all_data = stocks
+
+Dates = data.frame(date = all_data$Date)
+```
+
+```{r}
+new_AAPL = stocks[, c("Date", "SPY", "AAPL", "AAPL_High", "AAPL_Low")]
+daily.returns = c(0)
+si = nrow(AAPL)
+for(i in 2:si)
+{
+  retu = new_AAPL[i, 'AAPL'] / new_AAPL[i-1, 'AAPL'] - 1
+  daily.returns = c(daily.returns, retu)
+}
+new_AAPL$daily.returns = daily.returns
+```
+
+## Density plot for Adjusted Closing Price for Apple
+
+```{r fig.height=6, fig.width= 10, results='hide', message=FALSE, warning=FALSE}
+
+p1<- ggplot(box.df, aes(x=AAPL)) +
+    geom_density() +
+    scale_fill_viridis(discrete=TRUE) +
+    scale_color_viridis(discrete=TRUE) +
+    
+    xlab("Adjusted Close Price") +
+    ylab("Density") + ggtitle("Density plot of Adjusted Close Price for Apple")
+
+
+
+p2<- ggplot(new_AAPL, aes(x=daily.returns)) +
+    geom_density() +
+    scale_fill_viridis(discrete=TRUE) +
+    scale_color_viridis(discrete=TRUE) +
+    
+    xlab("Daily Returns") +
+    ylab("Density") + ggtitle("Density plot of Daily returns for Apple")
+
+
+grid.arrange(p1, p2, nrow = 1, ncol = 2)
+
+```
+
+
+
+
+```{r}
+rolling_mean <- function(arr, n=24){
+  res = arr
+  for(i in n:length(arr)){
+    res[i] = mean(arr[(i-n):i])
+  }
+  res = data.frame(res)
+  
+  res[c(1:n-1), 1] <- NA
+  res 
+}
+
+rolling_sd <- function(arr, n=24){
+  res = arr
+  for(i in n:length(arr)){
+    res[i] = sd(arr[(i-n):i])
+  }
+  res = data.frame(res)
+  
+  res[c(1:n-1), 1] <- NA
+  res 
+  }
+
+rolling_max <- function(arr, n=24){
+  res = arr
+  for(i in n:length(arr)){
+    res[i] = max(arr[(i-n):i])
+  }
+  res = data.frame(res)
+  
+  res[c(1:n-1), 1] <- NA
+  res 
+  }
+
+
+rolling_min <- function(arr, n=24){
+  res = arr
+  for(i in n:length(arr)){
+    res[i] = min(arr[(i-n):i])
+  }
+  res = data.frame(res)
+  
+  res[c(1:n-1), 1] <- NA
+  res 
+}
+
+
+
+
+
+AAPL_24da_mean=rolling_mean(stocks$AAPL)
+AMZN_24da_mean=rolling_mean(stocks$AMZN)
+AAPL_24da_add2std=AAPL_24da_mean+2*rolling_sd(stocks$AAPL)
+AAPL_24da_sub2std=AAPL_24da_mean-2*rolling_sd(stocks$AAPL)
+AMZN_24da_add2std=AMZN_24da_mean+2*rolling_sd(stocks$AMZN)
+AMZN_24da_sub2std=AMZN_24da_mean-2*rolling_sd(stocks$AMZN)
+AAPL_24da_max=rolling_max(stocks$AAPL_High)
+AMZN_24da_max=rolling_max(stocks$AMZN_High)
+AAPL_24da_min=rolling_min(stocks$AAPL_Low)
+AMZN_24da_min=rolling_min(stocks$AMZN_Low)
+
+```
+
+
+```{r}
+new_AAPL$AAPL_24da_mean = AAPL_24da_mean
+new_AAPL$AAPL_24da_add2std = AAPL_24da_add2std
+new_AAPL$AAPL_24da_sub2std = AAPL_24da_sub2std
+new_AAPL$AAPL_24da_max = AAPL_24da_max
+new_AAPL$AAPL_24da_min = AAPL_24da_min
+```
+
+
+```{r}
+shift <- function(x, n){
+  c(x[-(seq(n))], rep(NA, n))
+}
+
+Y <- shift(new_AAPL$daily.returns, 1)
+Y = Y[24:2514]
+```
+
+```{r}
+X = new_AAPL[24:(nrow(new_AAPL)-1), c("SPY", "AAPL_24da_mean", "AAPL_24da_add2std", "AAPL_24da_sub2std", "AAPL_24da_max", "AAPL_24da_min")]
+```
+
+```{r}
+Y = data.frame(Y)
+```
+
+
+```{r}
+shift <- function(x, n){
+  c(x[-(seq(n))], rep(NA, n))
+}
+
+Y <- shift(new_AAPL$AAPL, 1)
+Y = Y[24:2514]
+
+data_df = data.frame(Y = Y, SPY = X$SPY, SMA24 = X$AAPL_24da_mean, UpperBand = X$AAPL_24da_add2std, LowerBand = X$AAPL_24da_sub2std, Max24 = X$AAPL_24da_max, Min24 = X$AAPL_24da_min)
+
+colnames(data_df) = c("Y", "SPY", "SMA24", "UpperBand", "LowerBand", "Max24", "Min24")
+
+```
+
+
+## Co-relation between the variables
+
+
+```{r fig.height=6, fig.width= 10, results='hide', message=FALSE, warning=FALSE}
+
+variables = data_df
+drops <- c("Y")
+variables = variables[ , !(names(variables) %in% drops)]
+pairs(variables)
+```
+
+
+## Split into train and test
+```{r}
+train_df = data_df[1:1993, ]
+test_df = data_df[1994:nrow(data_df), ]
+test_date = data.frame(Dates[1994:nrow(data_df), ])
+```
+
+
+## Bayesian Linear Regression
+```{r}
+stocks.bas =  bas.lm(Y ~ ., 
+                   data=train_df,
+                  initprobs = "marg-eplogp",
+                   prior="g-prior",
+                  method = "MCMC",
+                   modelprior= uniform())
+```
+
+
+```{r}
+summary(stocks.bas)
+
+```
+
+```{r}
+coef(stocks.bas)
+plot(stocks.bas, ask = F)
+```
+
+
+```{r}
+y_test = data.frame(test_df$Y )
+drops <- c("Y")
+test_df = test_df[ , !(names(test_df) %in% drops)]
+
+```
+
+
+```{r}
+model.selection = data.frame(model1 = 0.5012, model2 = 0.1085, model3 = 0.0827, model4 = 0.0593, model5 = 0.0515)
+model.selection = data.frame(models = c("model1", "model2", "model3", "model4", "model5"), posterior.predictive.probability = c(0.5012, 0.1085, 0.0827, 0.0593, 0.0515))
+
+
+ggplot(model.selection, aes(x = models, y = posterior.predictive.probability)) + geom_bar(stat = "identity") + ggtitle("Posterior probability for top 5 models")
+```
+
+
+
+## Bayesian Linear Regression Prediction
+
+```{r}
+
+MPM_pred <- predict(stocks.bas, newdata = test_df, estimator = "MPM", se.fit = TRUE)
+ci_mpm <- confint(MPM_pred, estimator = "MPM")
+opt_mpm <- which.max(MPM_pred$fit)
+ci_mpm[opt_mpm, ]
+#test_movie$audience_score
+
+```
+
+
+```{r}
+
+predictions = data.frame(MPM_pred$Ybma)
+predictions = cbind(predictions, test_date)
+
+
+
+colnames(predictions)[colnames(predictions) == 'MPM_pred.Ybma'] <- 'pred'
+colnames(predictions)[colnames(predictions) == 'Dates.1994.nrow.data_df....'] <- 'date'
+
+
+plot.pred = cbind(predictions, y_test)
+colnames(plot.pred)[colnames(plot.pred) == 'test_df.Y'] <- 'actual'
+
+
+colors <- c("Actual" = "steelblue", "Predicted" = "darkred")
+
+ggplot(plot.pred, aes(x= (date), group = 1)) + 
+  geom_line(aes(y = pred, color = "Predicted")) + 
+  geom_line(aes(y = actual, color="Actual"))   + xlab("Time Period") + ggtitle("Actual vs Predicted Stock Prices") + ylab("Stock Prices") + labs(colour = "Stocks") + scale_color_manual(values = colors)
+
+```
+
+
+
+## MSE for the Predicted Values (Bayesain Linear Regression)
+
+```{r}
+mse <- mean((predictions$pred  - y_test$test_df.Y)** 2)
+mse
+
+```
+
+
+## Difference between the actual and predicted values
+
+
+```{r}
+difference = data.frame(predictions$pred - y_test$test_df.Y)
+
+
+
+colnames(difference)[colnames(difference) == 'predictions.BMA.Ybma...y_test.test_df.Y'] <- 'diff'
+
+
+boxplot(difference, ylab = ("Difference between the actual and predicted values"), main="Dispersion of difference between the actual and predicted values")
+
+```
+
+
+## Linear Regression
+
+
+```{r}
+linear = lm(Y ~ ., data = train_df)
+#summary(linear)
+```
+
+
+
+
+## Linear  Regression Prediction
+
+```{r fig.height=6, fig.width= 10, results='hide', message=FALSE, warning=FALSE}
+lm.predict = predict(linear, newdata = test_df, se.fit = TRUE)
+lm.predictions = data.frame(lm.predict$fit)
+
+lm.predictions = cbind(lm.predictions, test_date)
+
+
+
+colnames(lm.predictions)[colnames(lm.predictions) == 'lm.predict.fit'] <- 'linear'
+colnames(lm.predictions)[colnames(lm.predictions) == 'Dates.1994.nrow.data_df....'] <- 'date'
+
+
+
+lm.plot.pred = cbind(lm.predictions, predictions$pred)
+colnames(lm.plot.pred)[colnames(lm.plot.pred) == 'predictions$pred'] <- 'bayesian'
+
+
+colors <- c("Prices by Bayesian Regression" = "red", "Prices by Linear Regression" = "yellow")
+
+ggplot(lm.plot.pred, aes(x= (date), group = 1)) + 
+  geom_line(aes(y = linear, color = "Prices by Linear Regression")) + 
+  geom_line(aes(y = bayesian, color="Prices by Bayesian Regression")) + xlab("Time Period") + ggtitle("Bayesian Linear Regression vs Frequentist Linear Regression Prediction") + ylab("Stock Prices") + labs(colour = "Regression Method") + scale_color_manual(values = colors)
+
+```
+
+## MSE for the Predicted Values (Linear Regression)
+
+```{r}
+mse <- mean((lm.predictions$linear  - y_test$test_df.Y)** 2)
+mse
+
+```
