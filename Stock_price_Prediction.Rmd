@@ -1,6 +1,6 @@
 ---
 title: "Final Project"
-author: "Meet Valia"
+author: "Vijeet Sharma"
 date: "12/4/2020"
 output: word_document
 ---
